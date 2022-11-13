@@ -46,39 +46,39 @@ add_library(CloudJBuildProperties INTERFACE)
 #---------------------------------------------------------------------
 set(CloudJ_Fortran_FLAGS_Intel
    -cpp -w -auto -noalign "SHELL:-convert big_endian" "SHELL:-fp-model source" -mcmodel=medium
-   -shared-intel -traceback -DLINUX_IFORT
+   -shared-intel -traceback -DLINUX_IFORT -fPIC
    CACHE STRING "Cloud-J compiler flags for all build types with Intel compilers"
 )
 set(CloudJ_Fortran_FLAGS_RELEASE_Intel
-   -O2
+   -O2 -fPIC
    CACHE STRING "Cloud-J compiler flags for build type release with Intel compilers"
 )
 set(CloudJ_Fortran_FLAGS_RELWITHDEBINFO_Intel
-   -O2
+   -O2 -fPIC
    CACHE STRING "Cloud-J compiler flags for build type relwithdebinfo with Intel compilers"
 )
 set(CloudJ_Fortran_FLAGS_DEBUG_Intel
-   -g -O0 "SHELL:-check arg_temp_created" "SHELL:-debug all" -fpe0 -ftrapuv -check,bounds -DDEBUG
+   -g -O0 "SHELL:-check arg_temp_created" "SHELL:-debug all" -fpe0 -ftrapuv -check,bounds -DDEBUG -fPIC
    CACHE STRING "Cloud-J compiler flags for build type debug with Intel compilers"
 )
 
 set(CloudJ_Fortran_FLAGS_GNU
    -cpp -w -std=legacy -fautomatic -fno-align-commons -fconvert=big-endian
    -fno-range-check -mcmodel=medium -fbacktrace -g -DLINUX_GFORTRAN
-   -ffree-line-length-none
+   -ffree-line-length-none -fPIC
    CACHE STRING "Cloud-J compiler flags for all build types with GNU compilers"
 )
 set(CloudJ_Fortran_FLAGS_RELEASE_GNU
-   -O3 -funroll-loops
+   -O3 -funroll-loops -fPIC
    CACHE STRING "Cloud-J compiler flags for build type release with GNU compilers"
 )
 set(CloudJ_Fortran_FLAGS_RELWITHDEBINFO_GNU
-   -O3 -funroll-loops
+   -O3 -funroll-loops -fPIC
    CACHE STRING "Cloud-J compiler flags for build type relwithdebinfo with GNU compilers"
 )
 set(CloudJ_Fortran_FLAGS_DEBUG_GNU
    -g -gdwarf-2 -gstrict-dwarf -O0 -Wall -Wextra -Wconversion -Warray-temporaries 
-   -fcheck=array-temps -ffpe-trap=invalid,zero,overflow -finit-real=snan -fcheck=bounds -fcheck=pointer
+   -fcheck=array-temps -ffpe-trap=invalid,zero,overflow -finit-real=snan -fcheck=bounds -fcheck=pointer -fPIC
    CACHE STRING "Cloud-J compiler flags for build type debug with GNU compilers"
 )
 

@@ -3,6 +3,9 @@
 # For now, always build standalone interface files
 add_subdirectory(Standalone)
 
+# Python interface (!)
+add_subdirectory(Python)
+
 # Placeholder for other subdirectories, e.g. MAPL_ESMF
 #if(CLOUDJ_EXTERNAL_CONFIG AND MAPL_ESMF)
 #    add_subdirectory(MAPL_ESMF)

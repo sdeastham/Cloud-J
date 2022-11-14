@@ -7,7 +7,7 @@
    6 H2CO      PHOTON    CO        H2                      1.000 /H2COb /
    7 H2O2      PHOTON    OH        OH                      1.000 /H2O2  /
    8 CH3OOH    PHOTON    CH3O      OH                      1.000 /CH3OOH/
-   9 NO2       PHOTON    N2        O                       1.000 /NO2   /
+   9 NO2       PHOTON    NO        O                       1.000 /NO2   /
   11 NO3       PHOTON    NO        O2                      0.114 /NO3   /
   12 NO3       PHOTON    NO2       O                       0.886 /NO3   /
   13 N2O5      PHOTON    NO2       NO3                     1.000 /N2O5  /

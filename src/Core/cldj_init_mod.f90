@@ -12,11 +12,12 @@
       IMPLICIT NONE
 
       PUBLIC  :: INIT_CLDJ
+      LOGICAL :: LPRT = .FALSE.
 
       CONTAINS
 
 !-----------------------------------------------------------------------
-      subroutine INIT_CLDJ (TITLEJXX,NJXU,NJXX,TABLES_DIR)
+      subroutine INIT_CLDJ (TITLEJXX,NJXU,NJXX,TABLES_DIR,VERBOSE)
 !-----------------------------------------------------------------------
       implicit none
 
@@ -27,10 +28,17 @@
       character*6, intent(out), dimension(NJXU) :: TITLEJXX
       character*120  TIT_SPEC
       integer  JXUNIT,I, J, K, KR, RANSEED, NUN
+      logical, optional :: VERBOSE
 
-      write(6,*) ' Solar/Cloud-J  ver-7.7 initialization'
+      if (present(verbose)) then
+         lprt = verbose
+      else
+         lprt = .TRUE.
+      endif
+
+      if (LPRT) write(6,*) ' Solar/Cloud-J  ver-7.7 initialization'
       write(f_in,'(a,a)') trim(tables_dir),'/CJ77_inp.dat'
-      write(6,*) ' --> Reading from ', trim(f_in)
+      if (LPRT) write(6,*) ' --> Reading from ', trim(f_in)
 
 ! Use channel 8 to read fastJX data files:
       JXUNIT  = 8
@@ -38,7 +46,7 @@
       NUN = JXUNIT
       open (NUN,FILE=trim(f_in),status='old',form='formatted')
       read (NUN,'(a120)',err=4) TIT_SPEC
-         write(6,'(a)') TIT_SPEC
+         if (LPRT) write(6,'(a)') TIT_SPEC
       read (NUN,'(e10.3)',err=4) RAD
       read (NUN,'(e10.3)',err=4) ZZHT
       read (NUN,'(e10.3)',err=4) ATAU
@@ -50,7 +58,7 @@
       read (NUN,'(i10  )',err=4) NRANDO
       read (NUN,'(i10  )',err=4) ATM0
       read (NUN,'(i10  )',err=4) CLDFLAG
-         write(6,'(a,3i5)') ' finish params LNRG ATM0 CLDFLAG',LNRG,ATM0,CLDFLAG
+         if (LPRT) write(6,'(a,3i5)') ' finish params LNRG ATM0 CLDFLAG',LNRG,ATM0,CLDFLAG
       close (NUN)
 
       NSJSUB(:) = 0
@@ -88,13 +96,13 @@
 !sJ!         LCLIRAD =.false.
 !sJ!         LGGLLNL =.true.
 !sJ!      endif
-      write(6,'(a,3l2)')'LRRTMG/LCLIRAD/LGGLLNL=', LRRTMG, LCLIRAD, LGGLLNL
+      if (LPRT) write(6,'(a,3l2)')'LRRTMG/LCLIRAD/LGGLLNL=', LRRTMG, LCLIRAD, LGGLLNL
 
 !  inital RRTMG setup is done in subrotine CHEM_IN of p-input.f
 !  note that (if(LRRTMG) call RRTMG_SW_INI(cpdair)) is in CHEM_in of p-input.f
 !  lock indexing of RRTMg superbins (1:W_+W_r) onto std bins fluxes (1:S_)
-      write(6,'(a,i3,a,i3,a,i3,a,i3)') 'W_rrtmg= ',W_rrtmg,'  S_=',S_,'  W_r=',W_r,'  W_+ W_r= ',W_+W_r
-      write(6,'(a,f8.4,a,f8.4,a,i2)') 'ATAU0=',ATAU0,'  ATAU=',ATAU,'   option(ATM0)= ', ATM0
+      if (LPRT) write(6,'(a,i3,a,i3,a,i3,a,i3)') 'W_rrtmg= ',W_rrtmg,'  S_=',S_,'  W_r=',W_r,'  W_+ W_r= ',W_+W_r
+      if (LPRT) write(6,'(a,f8.4,a,f8.4,a,i2)') 'ATAU0=',ATAU0,'  ATAU=',ATAU,'   option(ATM0)= ', ATM0
 
 ! with Cloud-J v7.6, NO wavelength truncation for trop only, internal fixes remain
       if (W_ .ne. 18) then
@@ -123,7 +131,7 @@
          do J = 1,NSJSUB(K)
             KR = KR+1
             KDOKR(KR) = K
-            write(6,'(A,2I5)')'KR/KDOKR(KR)',KR, KDOKR(KR)
+            if (LPRT) write(6,'(A,2I5)')'KR/KDOKR(KR)',KR, KDOKR(KR)
          enddo
       enddo
       if (KR .ne. W_+W_r) CALL EXITC('>>>error w/ RRTM sub bins: KDOKR')
@@ -238,8 +246,8 @@
       read (NUN,*,err=4)
       read (NUN,'(i5,5x,i5)',err=4) NWWW, NSSS
 
-      write(6,'(a120)') TIT_SPEC
-      write(6,'(i5,A20,i5,A20)')  NWWW, ' photo-chem wl bins ', NSSS, ' solar heating bins '
+      if (LPRT) write(6,'(a120)') TIT_SPEC
+      if (LPRT) write(6,'(i5,A20,i5,A20)')  NWWW, ' photo-chem wl bins ', NSSS, ' solar heating bins '
 
       if (NWWW.gt.WX_ .or. NSSS.gt.SX_) then
        call EXITC(' WX_ or SX_ not large enough')
@@ -252,37 +260,37 @@
 
 !----w-params:  1=w-eff  2=w-bins, 3=solar(photons), 4=solar(W/m2), 5=Y-PAR,  6=Rayleigh, 7=SJ sub-bins
       read (NUN,'(a6,1x,a16,1x,a120)',err=4) TIT_J1S,TIT_J1L,TIT_J1N
-         write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
+         if (LPRT) write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
       read (NUN,'(5x,6e10.3)',err=4)    (WL(IW),IW=1,NSSS)
 
       read (NUN,'(a6,1x,a16,1x,a120)',err=4) TIT_J1S,TIT_J1L,TIT_J1N
-         write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
+         if (LPRT) write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
       read (NUN,'(5x,6e10.3)',err=4)    (WBIN(IW),IW=1,NSSS)
 
       read (NUN,'(a6,1x,a16,1x,a120)',err=4) TIT_J1S,TIT_J1L,TIT_J1N
-         write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
+         if (LPRT) write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
       read (NUN,'(5x,6e10.3)',err=4)    (FL(IW),IW=1,NSSS)
 
       read (NUN,'(a6,1x,a16,1x,a120)',err=4) TIT_J1S,TIT_J1L,TIT_J1N
-         write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
+         if (LPRT) write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
       read (NUN,'(5x,6e10.3)',err=4)    (FW(IW),IW=1,NSSS)
          FWSUM=0.d0
          do IW=1, NSSS
             FWSUM= FWSUM + FW(IW)
          enddo
-         write(6,*) 'total Solar flux=', FWSUM
+         if (LPRT) write(6,*) 'total Solar flux=', FWSUM
 
       read (NUN,'(a6,1x,a16,1x,a120)',err=4) TIT_J1S,TIT_J1L,TIT_J1N
-         write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
+         if (LPRT) write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
       read (NUN,'(5x,6e10.3)',err=4)    (FP(IW),IW=1,NSSS)
 
       read (NUN,'(a6,1x,a16,1x,a120)',err=4) TIT_J1S,TIT_J1L,TIT_J1N
-         write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
+         if (LPRT) write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
       read (NUN,'(5x,6e10.3)',err=4)    (QRAYL(IW),IW=1,NSSS)
 
 !7 SJ-sub-bins
       read (NUN,'(a6,1x,a16,1x,a120)',err=4) TIT_J1S,TIT_J1L,TIT_J1N
-         write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
+         if (LPRT) write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
       do I = 1,NSSS
         SJSUB(I,1)    = 1.0d0
         SJSUB(I,2:15) = 0.0d0
@@ -291,7 +299,7 @@
 !SJ! this is different in SJ, allows for SJSBU(:,1:16)  ? RRTM
          do I= NWWW, NSSS  ! fraction of solar radiation for each sub-bin
             read  (NUN,'(5x,5f10.5)',err=4) (SJSUB(I,IW),IW=1,15)
-               write(6,'(5x,5f10.6)') (SJSUB(I,IW),IW=1,15)
+               if (LPRT) write(6,'(5x,5f10.6)') (SJSUB(I,IW),IW=1,15)
          enddo
       endif
 
@@ -311,7 +319,7 @@
          TITLEJX(1) = TIT_J1S
          TITLEJL(1) = TIT_J1L
          LQQ(1) = 3
-         write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
+         if (LPRT) write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
 
       read (NUN,'(a6,1x,a16,1x,a120)',err=4) TIT_J1S,TIT_J1L,TIT_J1N
       read (NUN,'(a1,f3.0,1x,6e10.3/5x,6e10.3/5x,6e10.3)',err=4)    &
@@ -327,7 +335,7 @@
         TITLEJX(2) = TIT_J1S
         TITLEJL(2) = TIT_J1L
         LQQ(2) = 3
-        write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
+        if (LPRT) write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
 
       read (NUN,'(a6,1x,a16,1x,a120)',err=4) TIT_J1S,TIT_J1L,TIT_J1N
       read (NUN,'(a1,f3.0,1x,6e10.3/5x,6e10.3/5x,6e10.3)',err=4)    &
@@ -343,7 +351,7 @@
         TITLEJX(3) = TIT_J1S
         TITLEJL(3) = TIT_J1L
         LQQ(3) = 3
-        write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
+        if (LPRT) write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
 
 !---Read remaining species:  X-sections at 1-2-3 T_s
 !---read in 1 to 3 X-sects per J-value (JJ)
@@ -351,7 +359,7 @@
 !-- read new Xsection block
     3 continue
       read (NUN,'(a6,1x,a16,1x,a120)',err=4) TIT_J1S,TIT_J1L,TIT_J1N
-        write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
+        if (LPRT) write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
         if (TIT_J1S .eq. 'endofJ') goto 1
 !---try to add a new Xsect
     2 continue
@@ -365,7 +373,7 @@
         LQQ(JJ) = LQ
 !try to read a 2nd Temperature or Pressure
       read (NUN,'(a6,1x,a16,1x,a120)',err=4) TIT_J1S,TIT_J1L,TIT_J1N
-        write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
+        if (LPRT) write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
         if (TIT_J1S .eq. 'endofJ') goto 1
       if (TIT_J1S .eq. TITLEJX(JJ)) then
         LQ = 2
@@ -374,7 +382,7 @@
         LQQ(JJ) = LQ
 !try to read a 3rd Temperature or Pressure
       read (NUN,'(a6,1x,a16,1x,a120)',err=4) TIT_J1S,TIT_J1L,TIT_J1N
-         write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
+         if (LPRT) write(6,'(1x,a6,1x,a16,a8,a120)') TIT_J1S,TIT_J1L,' notes:',TIT_J1N   !print
          if (TIT_J1S .eq. 'endofJ') goto 1
        if (TIT_J1S .eq. TITLEJX(JJ)) then
         LQ = 3
@@ -397,7 +405,7 @@
 !---    possibly also for WACCM >200nm-only version.
 !---TROP-ONLY (W_ = 12 or 8) then drop the strat Xsects (labeled 'x')
       if (NWBIN .eq. 12 .or. NWBIN .eq. 8) then
-         write(6,'(a)')  &
+         if (LPRT) write(6,'(a)')  &
               ' >>>TROP-ONLY reduced wavelengths, drop strat X-sects'
          JJ = 3
          do J = 4,NJX
@@ -422,7 +430,7 @@
 
 !print-----
       do J = 1,NJX
-         write(6,'(a8,i5,2x,a6,2x,a16,2x,a1,i3,2x,3f6.1)') &
+         if (LPRT) write(6,'(a8,i5,2x,a6,2x,a16,2x,a1,i3,2x,3f6.1)') &
            'X-sects', J,TITLEJX(J),TITLEJL(J), SQQ(J),LQQ(J),(TQQ(I,J),I=1,LQQ(J))
       enddo
 !---need to check that TQQ (= T(K) or p(hPa)) is monotonically increasing:
@@ -486,10 +494,10 @@
       open (NUN,FILE=NAMFIL,status='old',form='formatted',err=4)
 
         read (NUN,'(a80)',err=4) TITLE0
-          write(6,'(a80)') TITLE0                                  !print----
+          if (LPRT) write(6,'(a80)') TITLE0                                  !print----
         read (NUN,'(i4)')  NCC
         read (NUN,'(i4)')  MCC
-          write(6,'(3i6,a)') NCC,MCC,SX_,' types of clouds & #Reff'   !print----
+          if (LPRT) write(6,'(3i6,a)') NCC,MCC,SX_,' types of clouds & #Reff'   !print----
         read (NUN,*)
         read (NUN,*)
         read (NUN,*)
@@ -498,7 +506,7 @@
 
         do K = 1, NCC
            read (NUN,'(a12,f8.5)',err=4) TITLCC(K),DCC(K)
-           write(6,'(a,i4,1x,a12,f8.5)') 'Cloud#',K,TITLCC(K),DCC(K)  !print----
+           if (LPRT) write(6,'(a,i4,1x,a12,f8.5)') 'Cloud#',K,TITLCC(K),DCC(K)  !print----
            do J = 12, SX_
               do I = 1,MCC
                  read (NUN,'(i2, 1x, f5.2, f5.1, f7.1, f5.3, e8.1,f6.3,f8.5,7f6.3)',err=4) &
@@ -533,7 +541,7 @@
     2 continue
         close(NUN)
 
-         write(6,'(a,2f9.5,i5)') ' ATAU/ATAU0',ATAU,ATAU0   !print----
+         if (LPRT) write(6,'(a,2f9.5,i5)') ' ATAU/ATAU0',ATAU,ATAU0   !print----
 
       END SUBROUTINE RD_CLD
 
@@ -564,16 +572,16 @@
 
       open (NUN,FILE=NAMFIL,status='old',form='formatted',err=4)
       read (NUN,'(a120)',err=4) TITLE0
-      write(6,'(a120)') TITLE0                              !print----
+      if (LPRT) write(6,'(a120)') TITLE0                              !print----
       read (NUN,*)
       read (NUN,'(i4,i4)')  NSS, NSX_
       read (NUN,*)
-      write(6,'(i6,a)') NSS, ' types of strat sulf aerosols'
+      if (LPRT) write(6,'(i6,a)') NSS, ' types of strat sulf aerosols'
       do K = 1,NSS
 !SJ! *** the SSA file for LCLIRAD in SJ has different format  '(a12, 3f8,4,...
          read (NUN,'(a10, 3f8.4, 2f8.1)')    &
               TITLSS(K),RSS(K),GSS(K),DSS(K),TSS(K),WSS(K)
-         write(6,'(i4,1x,a12,2f10.4,2f8.1)') K,TITLSS(K),RSS(K),DSS(K),TSS(K),WSS(K)
+         if (LPRT) write(6,'(i4,1x,a12,2f10.4,2f8.1)') K,TITLSS(K),RSS(K),DSS(K),TSS(K),WSS(K)
          do J = 5, NSX_
             read(NUN,'(i2,2f8.4,e8.1,2f8.5,7f6.3)')      &
                  JSS,WJSS,XNDR,XNDI,QSS(J,K),SSS(J,K),(PSS(I,J,K), I=2,8)
@@ -631,7 +639,7 @@
 
       read (NUN,'(a120)',err=4) TITLE0
 !print----
-          write(6,'(a120)') TITLE0
+          if (LPRT) write(6,'(a120)') TITLE0
         read (NUN,*)
         read (NUN,*)
       do J = 1, A_
@@ -648,7 +656,7 @@
         enddo
          NAA = J
 !print----
-          write(6,'(i5,1x,a12,1x,7f7.3,1x,a80)')   &
+          if (LPRT) write(6,'(i5,1x,a12,1x,7f7.3,1x,a80)')   &
            J,TITLAAJ,RAAJ,DAAJ,(QAA(K,J),K=1,5),TITLE0
        else
           goto 2
@@ -684,9 +692,9 @@
       open (NUN,FILE=NAMFIL,status='old',form='formatted')
 
       read (NUN,'(a78)') TITLE0
-      write(6,*) 'UMichigan Aerosols', TITLE0
+      if (LPRT) write(6,*) 'UMichigan Aerosols', TITLE0
       read(NUN,'(5x,10f5.0)') WMM
-      write(6,'(a,10f7.1)') ' UMIchigan aerosol wavelengths:',WMM
+      if (LPRT) write(6,'(a,10f7.1)') ' UMIchigan aerosol wavelengths:',WMM
 
 !---33 Different UM Aerosol Types:  SULF, SS-1,-2,-3,-4, DD-1,-2,-3,-4,
 !---      FF00(0%BC), FF02, ...FF14(14%BC),  BB00, BB02, ...BB30(30%BC)
@@ -700,7 +708,7 @@
          enddo
       enddo
       close(NUN)
-      write(6,'(a)') 'collapse UM wavelengths, drop 550 nm'
+      if (LPRT) write(6,'(a)') 'collapse UM wavelengths, drop 550 nm'
       WMM(4) = WMM(5)
       WMM(5) = WMM(6)
       do L=1,33
@@ -712,7 +720,7 @@
          enddo
       enddo
 
-      write(6,'(7(i5,1x,a4))') (L,TITLUM(L), L=1,33)
+      if (LPRT) write(6,'(7(i5,1x,a4))') (L,TITLUM(L), L=1,33)
 
       END SUBROUTINE RD_UM
 
@@ -735,8 +743,8 @@
       open (NJ2,file=NAMFIL,status='old',form='formatted')
       read (NJ2,'(A)') TITLE0
       read (NJ2,'(2I5)') NTLATS,NTMONS
-!      write(6,'(1X,A)') TITLE0
-      write(6,1000) NTLATS,NTMONS
+!      if (LPRT) write(6,'(1X,A)') TITLE0
+      if (LPRT) write(6,1000) NTLATS,NTMONS
       N216  = min(216, NTLATS*NTMONS)
       do IA = 1,N216
         read (NJ2,'(1X,I3,3X,I2)') LAT, MON
@@ -791,18 +799,18 @@
       open (NJ2,file=NAMFIL,status='old',form='formatted')
       read (NJ2,'(A)') TITLE0
       read (NJ2,'(2I5)') NTLATS,NTMONS
-!      write(6,'(1X,A)') TITLE0
-      write(6,1000) NTLATS,NTMONS
+!      if (LPRT) write(6,'(1X,A)') TITLE0
+      if (LPRT) write(6,1000) NTLATS,NTMONS
       N216  = min(216, NTLATS*NTMONS)
       do IA = 1,N216
         read (NJ2,'(1X,I3,3X,I2)') LAT, MON
-!        write(6,'(1X,I3,3X,I2)')   LAT, MON
+!        if (LPRT) write(6,'(1X,I3,3X,I2)')   LAT, MON
         M = min(12, max(1, MON))
         L = min(18, max(1, (LAT+95)/10))
         read (NJ2,'(3X,11E9.2)') (H2O_REF(I,L,M), I=1,31)
         read (NJ2,'(3X,11F9.2)') (CH4_REF(I,L,M), I=1,31)
-!        write (6,'(3X,11E9.2)') (H2O_REF(I,L,M), I=1,31)
-!        write(6,'(3X,11F9.2)') (CH4REF(I,L,M), I=1,31)
+!        if (LPRT) write (6,'(3X,11E9.2)') (H2O_REF(I,L,M), I=1,31)
+!        if (LPRT) write(6,'(3X,11F9.2)') (CH4REF(I,L,M), I=1,31)
 
       enddo
       close (NJ2)
@@ -863,7 +871,7 @@
       open (NUNIT,file=NAMFIL,status='old',form='formatted')
 
        read (NUNIT,'(a)') CLINE
-         write(6,'(a)') CLINE
+         if (LPRT) write(6,'(a)') CLINE
       do J = 1,JVN_
        read (NUNIT,'(i4,1x,a50,4x,f5.3,2x,a6)') JJ,T_REACT,F_FJX,T_FJX
        if (JJ .gt. JVN_) exit
@@ -885,19 +893,21 @@
        enddo
       enddo
 
-      write(6,'(a,i4,a)')' Photochemistry Scheme with',NRATJ,' J-values'
-      do K=1,NRATJ
-       if (JVMAP(K) .ne. '------' ) then
-        J = JIND(K)
-        if (J.eq.0) then
-         write(6,'(i5,a50,f6.3,a,1x,a6)') K,JLABEL(K),JFACTA(K), &
-               ' no mapping onto fast-JX',JVMAP(K)
-        else
-         write(6,'(i5,a50,f6.3,a,i4,1x,a6)') K,JLABEL(K),JFACTA(K), &
-               ' mapped to FJX:',J,TITLEJX(J)
+      if (LPRT) then
+       write(6,'(a,i4,a)')' Photochemistry Scheme with',NRATJ,' J-values'
+       do K=1,NRATJ
+        if (JVMAP(K) .ne. '------' ) then
+         J = JIND(K)
+         if (J.eq.0) then
+          write(6,'(i5,a50,f6.3,a,1x,a6)') K,JLABEL(K),JFACTA(K), &
+                ' no mapping onto fast-JX',JVMAP(K)
+         else
+          write(6,'(i5,a50,f6.3,a,i4,1x,a6)') K,JLABEL(K),JFACTA(K), &
+                ' mapped to FJX:',J,TITLEJX(J)
+         endif
         endif
-       endif
-      enddo
+       enddo
+      endif
 
       close(NUNIT)
       END SUBROUTINE RD_JS_JX
@@ -928,14 +938,14 @@
       open (NUN,FILE=NAMFIL,status='old',form='formatted',err=4)
 
       read (NUN,'(a120)',err=4) TITLE0
-      write(6,'(a120)') TITLE0                              !print----
+      if (LPRT) write(6,'(a120)') TITLE0                              !print----
       read (NUN,'(i4)')  NGG
-      write(6,'(i6,a)')  NGG, ' Reff-s for GEO SSA'          !print----
+      if (LPRT) write(6,'(i6,a)')  NGG, ' Reff-s for GEO SSA'          !print----
       read (NUN,*)
       read (NUN,*)
       do K = 1,NGG
          read(NUN,'(10x,5f8.4)') RGG(K),G1,DGG(K),G2,G3
-         write(6,'(i4,1x,3f8.4,2f8.1)') K,RGG(K),DGG(K), G1,G2,G3
+         if (LPRT) write(6,'(i4,1x,3f8.4,2f8.1)') K,RGG(K),DGG(K), G1,G2,G3
          do J = 5, 27
             read (NUN,'(2x,2f8.4,e8.1,2f8.5,7f6.3)',err=4) &
                  WGGJ,XNDR,XNDI,QGG(J,K),SGG(J,K),(PGG(I,J,K),I=2,8)
@@ -979,24 +989,24 @@
 !
       open (NJ2,file=NAMFIL,status='old',form='formatted')
       read (NJ2,'(a)') TITLE0
-         write(6,'(1x,a)') TITLE0
+         if (LPRT) write(6,'(1x,a)') TITLE0
       read (NJ2,*)
       read (NJ2,*)
 ! only specify 19 pressure levels from 2.7 hPa to 340 hPa
       read (NJ2,'(19f7.2)') (P_GREF(L),L=1,19)
-      write(6,'(19f7.2)')(P_GREF(L),L=1,19)
+      if (LPRT) write(6,'(19f7.2)')(P_GREF(L),L=1,19)
       read (NJ2,*)
       read (NJ2,*)
       read (NJ2,*)
 ! latitude bins 1:36 are Gauss, but approx 1.3953 + (J-33)*2.7906 deg
       read (NJ2,'(32f5.1)') (Y_GREF(L),L=1,32)
-      write (6,'(32f5.1)') (Y_GREF(L),L=1,32)
+      if (LPRT) write (6,'(32f5.1)') (Y_GREF(L),L=1,32)
 
       read (NJ2,*)
       read (NJ2,'(32f5.1)') (Y_GREF(L),L=64,33,-1)
-      write (6,'(32f5.1)') (Y_GREF(L),L=33,64)
+      if (LPRT) write (6,'(32f5.1)') (Y_GREF(L),L=33,64)
       read (NJ2,'(a)') TITLE0
-         write(6,'(1x,a)') TITLE0
+         if (LPRT) write(6,'(1x,a)') TITLE0
       do M = 1,12
           read (NJ2,*)
         do J = 1,64
@@ -1005,7 +1015,7 @@
         enddo
       enddo
       read (NJ2,'(a)') TITLE0
-         write(6,'(1x,a)') TITLE0
+         if (LPRT) write(6,'(1x,a)') TITLE0
       do M = 1,12
           read (NJ2,*)
         do J = 1,64
@@ -1014,7 +1024,7 @@
         enddo
       enddo
       read (NJ2,'(a)') TITLE0
-         write(6,'(1x,a)') TITLE0
+         if (LPRT) write(6,'(1x,a)') TITLE0
       do M = 1,12
           read (NJ2,*)
         do J = 1,64

@@ -19,21 +19,51 @@
       USE OSA_SUB_MOD
 
       implicit none
+
+      logical :: cj_initialized=.false.
+
 !---------------key params in/out of CLOUD_J-------------------------
 
       CONTAINS
 
+      SUBROUTINE INIT_CLOUDJ ( TABLES_DIR, verbose )
+
+      character(len=255)          :: TABLES_DIR
+      logical, intent(in)         :: verbose
+      INTEGER :: JVNU, NJXX
+      character*6,  dimension(JVN_)  ::  TITLJXX
+
+      JVNU = JVN_
+      if (.not. cj_initialized) then
+         call INIT_CLDJ (TITLJXX,JVNU,NJXX,TABLES_DIR,verbose)
+         cj_initialized = .true.
+      endif
+
+      END SUBROUTINE INIT_CLOUDJ
+
       SUBROUTINE RUN_CLOUDJ ( TABLES_DIR, U0, PSURF, &
                               ALBEDO, WIND, CHLR, ETAA, ETAB, &
                               TI, RI, O3, CH4, AER1, NAA1, AER2, NAA2, &
-                              CLDFRW, CLDLWCW, CLDIWCW )
+                              CLDFRW, CLDLWCW, CLDIWCW, ZPJQUAD, N0, N1 )
       ! O3 and CH4 expected in ppbv
 
-      character(len=255)         :: TABLES_DIR
-      real*8, dimension(:)       :: O3, CH4 ! L1_
-      real*8, dimension(:)       :: CLDFRW,CLDIWCW,CLDLWCW ! LWEPAR
-      real*8, dimension(:)       :: ETAA,ETAB,RI,TI,AER1,AER2 ! L2_
-      integer,dimension(:)       :: NAA1,NAA2 ! L2_
+      !SUBROUTINE RUN_CLOUDJ ( TABLES_DIR )
+
+      character(len=255)          :: TABLES_DIR
+      Real*8, dimension(:)        :: O3, CH4 ! L1_
+      Real*8, dimension(:)        :: CLDFRW,CLDIWCW,CLDLWCW ! LWEPAR
+      Real*8, dimension(:)        :: ETAA,ETAB,RI,TI,AER1,AER2 ! L2_
+      Integer,dimension(:)        :: NAA1,NAA2 ! L2_
+      Integer                     :: N0,N1
+      Real*8, dimension(N0,N1)    :: ZPJQUAD
+!f2py intent(in) n0, n1
+!f2py intent(out) zpjquad
+!f2py depend(n0,n1) zpjquad
+
+      !Real*8, dimension(L1_)      :: O3, CH4 ! L1_
+      !Real*8, dimension(LWEPAR)   :: CLDFRW,CLDIWCW,CLDLWCW ! LWEPAR
+      !Real*8, dimension(L2_)      :: ETAA,ETAB,RI,TI,AER1,AER2 ! L2_
+      !Integer,dimension(L2_)      :: NAA1,NAA2 ! L2_
 
       logical                    :: LPRTJ, LDARK
       integer                    :: IRAN
@@ -53,6 +83,8 @@
       real*8,  dimension(5,S_)    :: RFL
       real*8,  dimension(NQD_)    :: WTQCA
 
+      real*8, dimension(L2_) :: ZOFL
+
 !-------------local use-----------------------
       integer :: NSZA,MONTH,ILAT
 ! beware the OSA code uses single R*4 variables
@@ -61,56 +93,62 @@
       real*8, dimension(L_)  :: WLC,WIC
       real*8  SCALEH,CF,PMID,PDEL,ZDEL,ICWC,F1
       integer I,J,K,L,N
-      integer LTOP, NJXX,JP04,JP09
+      integer LTOP, NJXX,JP04,JP09,JP
       character*6,  dimension(JVN_)  ::  TITLJXX
       character*11, dimension(4)     ::  TITJX
       real*8 VJOSA(L2_,2),VJSTD(L2_,2)
 
       character(len=255) :: file_loc
+      logical :: use_file
+      logical :: verbose
 
-      write(6,'(a)') '>>>begin Cloud-J v7.7 Standalone'
+      verbose=.false.
+
+      if (verbose) write(6,'(a)') '>>>begin Cloud-J v7.7 Standalone'
 
       ANU = AN_
       JVNU = JVN_
       L1U = L1_
 !---read in & store all fast-JX data:   single call at set up
 !-----------------------------------------------------------------------
-      call INIT_CLDJ (TITLJXX,JVNU,NJXX,TABLES_DIR)
+      !call INIT_CLDJ (TITLJXX,JVNU,NJXX,TABLES_DIR)
+      call INIT_CLOUDJ(TABLES_DIR,verbose)
 !-----------------------------------------------------------------------
 
-      ! For now, zero out aerosols
-      !AER1(:) = 0.0d0
-      !NAA1(:) = 0
-      !AER2(:) = 0.0d0
-      !NAA2(:) = 0
+      use_file = .false.
 
 !--P, T, Cld & Aersl profiles, simple test input case
-      !file_loc = trim(tables_dir) // "/atmos_PTClds.dat"
-      !open (77,file=trim(file_loc),status='old',err=91)
-      !  read (77,*)
-      !  read (77,'(2i5)') MONTH, ILAT               ! for monthly 2D climatologies
-      !    YLAT = ILAT
-      !  read (77,'(f5.0)') PSURF
-      !  read (77,'(f5.2)') ALBEDO(5)
-      !  read (77,'(4f5.2)') ALBEDO(1),ALBEDO(2),ALBEDO(3),ALBEDO(4)
-      !  read (77,'(4f5.2)') WIND,CHLR
-      !    write(6,'(a,2i5,5x,a,i5)') 'Atmosphere:',LPAR,LWEPAR, 'LPAR / LWEPAR', L1_
-      !    write(6,'(a,f10.4)') 'P surface', PSURF
-      !    write(6,'(a,3i4)') 'MONTH/ LAT',MONTH,ILAT
-      !    write(6,'(a,5f8.4)') 'Albedos 1:4 & 5=SZA', ALBEDO
-      !    write(6,'(a,2f8.3)') 'OSA: wind & chlor-a',WIND,CHLR
-      !  read (77,*)
-      ! do L = 1,LPAR+1
-      !  read (77,'(i3,1x,2f11.7,2x,f5.1,f5.2,f11.2,2(f7.3,i4))') &
-      !                J,ETAA(L),ETAB(L),TI(L),RI(L),ZOFL(L) &
-      !               ,AER1(L),NAA1(L),AER2(L),NAA2(L)
-      ! enddo
-      !  read (77,*)
-      ! do L = LWEPAR,1,-1
-      !  read (77,'(i3,1p,e14.5,28x,2e14.5)') &
-      !                J,CLDFRW(L),CLDLWCW(L),CLDIWCW(L)
-      ! enddo
-      !close(77)
+      if (use_file) then
+       file_loc = trim(tables_dir) // "/atmos_PTClds.dat"
+       open (77,file=trim(file_loc),status='old')
+         read (77,*)
+         read (77,'(2i5)') MONTH, ILAT               ! for monthly 2D climatologies
+           YLAT = ILAT
+         read (77,'(f5.0)') PSURF
+         read (77,'(f5.2)') ALBEDO(5)
+         read (77,'(4f5.2)') ALBEDO(1),ALBEDO(2),ALBEDO(3),ALBEDO(4)
+         read (77,'(4f5.2)') WIND,CHLR
+         if (verbose) then
+           write(6,'(a,2i5,5x,a,i5)') 'Atmosphere:',LPAR,LWEPAR, &
+                                      'LPAR / LWEPAR', L1_
+           write(6,'(a,f10.4)') 'P surface', PSURF
+           write(6,'(a,3i4)') 'MONTH/ LAT',MONTH,ILAT
+           write(6,'(a,5f8.4)') 'Albedos 1:4 & 5=SZA', ALBEDO
+           write(6,'(a,2f8.3)') 'OSA: wind & chlor-a',WIND,CHLR
+         endif
+         read (77,*)
+        do L = 1,LPAR+1
+         read (77,'(i3,1x,2f11.7,2x,f5.1,f5.2,f11.2,2(f7.3,i4))') &
+                       J,ETAA(L),ETAB(L),TI(L),RI(L),ZOFL(L) &
+                      ,AER1(L),NAA1(L),AER2(L),NAA2(L)
+        enddo
+         read (77,*)
+        do L = LWEPAR,1,-1
+         read (77,'(i3,1p,e14.5,28x,2e14.5)') &
+                       J,CLDFRW(L),CLDLWCW(L),CLDIWCW(L)
+        enddo
+       close(77)
+      endif
 
       ETAA(L2_) = 0.d0
       ETAB(L2_) = 0.d0
@@ -118,14 +156,16 @@
       do L = 1,L2_
        PPP(L) = ETAA(L) + ETAB(L)*PSURF
       enddo
+
 ! just for print out and levels
         !do L = 1,L1_
         ! PPPX(L) = 0.5d0*(PPP(L)+PPP(L+1))
         !enddo
 !---sets climatologies for O3, T, D & Z
 !-----------------------------------------------------------------------
-!      call ACLIM_FJX (YLAT,MONTH,PPP, TTT,O3,CH4, L1_)
+      if (use_file) call ACLIM_FJX (YLAT,MONTH,PPP, TTT,O3,CH4, L1_)
 !-----------------------------------------------------------------------
+
       TTT(:) = 200.0d0 ! For safety's sake
       do L = 1,L_
 !!!       TTT(L) = TI(L)  keep climatology T's and O3's
@@ -218,7 +258,7 @@
 !!! begin call to Cloud_J
 !!! SDE 2022-11-13: Assuming U0 (cos(SZA)) is supplied
 
-      write(6,'(i5,a)') CLDFLAG, ' CLDFLAG'
+      if (verbose) write(6,'(i5,a)') CLDFLAG, ' CLDFLAG'
       do L = 1,LTOP
         CLF(L) = CLDFRW(L)
       enddo
@@ -243,7 +283,7 @@
         enddo
       enddo
 
-      LPRTJ = .true.
+      LPRTJ = verbose
       if (LPRTJ) then
           write(6,'(a,f8.3,3f8.5)')'SZA SOLF U0 albedo' &
                 ,SZA,SOLF,U0,RFL(5,18)
@@ -269,45 +309,47 @@
 
 
 ! summary print, can change unit to N=7 for file without print from Fast-J
-      N=7
-      NSZA=1
-      write(N,'(a,2i5)') ' v7.7 CLDFLAG/NSZA=', CLDFLAG,NSZA
-      write(N,*) ' LDARK WTQCA',LDARK,WTQCA
-      write(N,'(a)') ' AVERAGE Fast-J  v7.7 ----J-values----'
-      write(N,'(1x,a,72(a6,3x))') 'L=  ',(TITLEJX(K), K=1,NJX)
-      do L = L_,1,-1
-         write(N,'(i3,1p, 72e9.2)') L,(VALJXX(L,K),K=1,NJX)
-      enddo
+      if (verbose) then
+         N=7
+         NSZA=1
+         write(N,'(a,2i5)') ' v7.7 CLDFLAG/NSZA=', CLDFLAG,NSZA
+         write(N,*) ' LDARK WTQCA',LDARK,WTQCA
+         write(N,'(a)') ' AVERAGE Fast-J  v7.7 ----J-values----'
+         write(N,'(1x,a,72(a6,3x))') 'L=  ',(TITLEJX(K), K=1,NJX)
+         do L = L_,1,-1
+            write(N,'(i3,1p, 72e9.2)') L,(VALJXX(L,K),K=1,NJX)
+         enddo
 
-      write(N,'(a)') 'heating rate profiles in K/day v7.6  180-778nm '
-      write(N, '(a4, 32f7.1)')'wvl ',(WL(K),K=NW1,NW2)
-      do L = L_,1,-1
-         write(N,'(i4,32f7.2)') L,(SKPERD(K,L), K=NW1,NW2)
-      enddo
-      write(N,'(a)') 'heating rate profiles in K/day v7.6 778-...nm plus 1:18 19:27 1:27'
-      write(N, '(a4,32f7.1)')'wvl ',(WL(K),K=NW2+1,NS2)
-      do L = L_,1,-1
-         write(N,'(i4,35f7.2)') L,(SKPERD(K,L), K=NW2+1,NS2+2),SKPERD(S_+1,L)+SKPERD(S_+2,L)
-      enddo
+         write(N,'(a)') 'heating rate profiles in K/day v7.6  180-778nm '
+         write(N, '(a4, 32f7.1)')'wvl ',(WL(K),K=NW1,NW2)
+         do L = L_,1,-1
+            write(N,'(i4,32f7.2)') L,(SKPERD(K,L), K=NW1,NW2)
+         enddo
+         write(N,'(a)') 'heating rate profiles in K/day v7.6 778-...nm plus 1:18 19:27 1:27'
+         write(N, '(a4,32f7.1)')'wvl ',(WL(K),K=NW2+1,NS2)
+         do L = L_,1,-1
+            write(N,'(i4,35f7.2)') L,(SKPERD(K,L), K=NW2+1,NS2+2),SKPERD(S_+1,L)+SKPERD(S_+2,L)
+         enddo
 
-      write(N,'(a)') 'Fast-J  v7.7 ---PHOTO_JX internal print: Solar fluxes (W/m2)--'
-      write(N,'(a11,f12.4)')    ' inc TOTAL ',SWMSQ(1)
-      write(N,'(a11,f12.4)')    ' rfl outtop',SWMSQ(2)
-      write(N,'(a11,f12.4)')    ' abs in atm',SWMSQ(3)
-      write(N,'(a11,f12.4)')    ' abs at srf',SWMSQ(4)
-      write(N,'(a11,1p,e12.4)') ' PAR direct',SWMSQ(5)
-      write(N,'(a11,1p,e12.4)') ' PAR diffus',SWMSQ(6)
+         write(N,'(a)') 'Fast-J  v7.7 ---PHOTO_JX internal print: Solar fluxes (W/m2)--'
+         write(N,'(a11,f12.4)')    ' inc TOTAL ',SWMSQ(1)
+         write(N,'(a11,f12.4)')    ' rfl outtop',SWMSQ(2)
+         write(N,'(a11,f12.4)')    ' abs in atm',SWMSQ(3)
+         write(N,'(a11,f12.4)')    ' abs at srf',SWMSQ(4)
+         write(N,'(a11,1p,e12.4)') ' PAR direct',SWMSQ(5)
+         write(N,'(a11,1p,e12.4)') ' PAR diffus',SWMSQ(6)
+      end if
 
 !---map the J-values from fast-JX onto CTM (ZPJQUAD) using JIND & JFACTA
 !--- from the 'FJX_j2j.dat' tables
-!      do J = 1,NRATJ
-!         JP = JIND(J)
-!         if (JP .gt. 0) then
-!            do L = 1,L_
-!               ZPJQUAD(L,J) = ZPJQUAD(L,J) + VALJXX(L,JP)*JFACTA(J)
-!          enddo
-!        endif
-!      enddo
+      do J = 1,NRATJ
+         JP = JIND(J)
+         if (JP .gt. 0) then
+            do L = 1,L_
+               ZPJQUAD(L,J) = ZPJQUAD(L,J) + VALJXX(L,JP)*JFACTA(J)
+          enddo
+        endif
+      enddo
 
       end subroutine
       end module

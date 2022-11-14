@@ -352,4 +352,36 @@
       enddo
 
       end subroutine
+
+      SUBROUTINE GET_RXN_COUNT ( N_RXN )
+!f2py intent(out) n_rxn
+      INTEGER, INTENT(OUT) :: N_RXN
+      N_RXN = NRATJ
+      END SUBROUTINE GET_RXN_COUNT
+
+      SUBROUTINE GET_RXN ( I_RXN, CJ_IDX, CJ_RXN )
+      ! Automated method to retrieve Cloud-J indices
+      ! Easiest call method is GET_INDICES(IDX_LIST,RXN_LIST,GET_RXN_COUNT())
+      INTEGER :: J,K
+      INTEGER :: I_RXN
+      INTEGER :: CJ_IDX
+      CHARACTER(LEN=50) :: CJ_RXN
+!f2py intent(in) i_rxn
+!f2py intent(out) cj_idx, cj_rxn
+
+      ! Default
+      cj_rxn = 'NONE'
+      cj_idx = -1
+      K = I_RXN
+      if (JVMAP(K) .ne. '------' ) then
+       ! Check that this species has a cross-section mapped
+       J = JIND(K)
+       if (J.ne.0) then
+        ! Photolysis rate being calculated for this reaction
+        CJ_IDX = K
+        CJ_RXN = TRIM(JLABEL(K))
+       endif
+      endif
+      END SUBROUTINE GET_RXN
+
       end module

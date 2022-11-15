@@ -55,9 +55,11 @@ cloudj_python.init_cloudj(tables_dir, True)
 print('Getting reaction count...')
 n_rxn = cloudj_python.get_rxn_count()
 print(f'{n_rxn} reactions identified. Reading reaction list...')
+rxn_names = []
 for i_rxn in range(n_rxn):
     i_out, rxn_out = cloudj_python.get_rxn(i_rxn)
     print(i_out,rxn_out)
+    rxn_names.append(rxn_out.decode('utf-8'))
 print('Reactions read. Starting Fast-JX runs..')
 for sza in np.linspace(-np.pi,np.pi,11):
     U0 = np.cos(sza)
@@ -66,5 +68,9 @@ for sza in np.linspace(-np.pi,np.pi,11):
                                      Ak_hPa,Bk,T_K,RH_frac,O3_ppbv,CH4_ppbv,
                                      aerpath[:,0],aeridx[:,0],aerpath[:,1],aeridx[:,1],
                                      cld_frac,cld_lwc,cld_iwc,n_lev,max_rates)
-    i_j_max = np.argmax(j_out,axis=1)
+    max_idx = np.unravel_index(np.argmax(j_out),j_out.shape)
+    i_lev_max = max_idx[0]
+    i_j_max = max_idx[1]
+    j_max = j_out[i_lev_max,i_j_max]
+    j_max_name = rxn_names[i_j_max].strip()
     print(' --> SZA {:9.2f} deg: max J-rate {:8.2%} ({:s})'.format(sza*180.0/np.pi,j_max,j_max_name))

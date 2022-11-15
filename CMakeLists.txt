@@ -266,15 +266,6 @@ if(CLOUDJ_EXTERNAL_CONFIG AND GCCLASSIC_WRAPPER)
 endif()
 
 #-----------------------------------------------------------------------------
-# For Cloud-J as a module for Python
-#-----------------------------------------------------------------------------
-if(CLOUDJ_EXTERNAL_CONFIG AND PYTHON_WRAPPER)
-    target_compile_definitions(CloudJBuildProperties
-        INTERFACE PYTHON
-    )
-endif()
-
-#-----------------------------------------------------------------------------
 # For Cloud-J as submodule in MAPL/ESMF superproject
 #-----------------------------------------------------------------------------
 if(CLOUDJ_EXTERNAL_CONFIG AND MAPL_ESMF)

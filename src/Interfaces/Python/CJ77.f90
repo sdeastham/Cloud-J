@@ -106,6 +106,16 @@
 
       if (verbose) write(6,'(a)') '>>>begin Cloud-J v7.7 Standalone'
 
+      if (N0 .ne. L_) then
+          write(*,*) 'Mismatch in level count: ', N0, L_
+          ZPJQUAD(:,:) = -999.0
+          return
+      elseif (N1 .lt. NRATJ) then
+          write(*,*) 'Output array not large enough to hold J-rates. Need: ', NRATJ
+          ZPJQUAD(:,:) = -999.0
+          return
+      endif
+
       ANU = AN_
       JVNU = JVN_
       L1U = L1_

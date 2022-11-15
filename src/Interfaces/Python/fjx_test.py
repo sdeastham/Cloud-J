@@ -64,10 +64,11 @@ print('Reactions read. Starting Fast-JX runs..')
 for sza in np.linspace(-np.pi,np.pi,11):
     U0 = np.cos(sza)
     # Output dimensions: [level, j-rate]
+    # NB: j_out will be -999 throughout if sizing is incorrect
     j_out = cloudj_python.run_cloudj(tables_dir,U0,PS_hPa,albedo,wind,chlr,
                                      Ak_hPa,Bk,T_K,RH_frac,O3_ppbv,CH4_ppbv,
                                      aerpath[:,0],aeridx[:,0],aerpath[:,1],aeridx[:,1],
-                                     cld_frac,cld_lwc,cld_iwc,n_lev,max_rates)
+                                     cld_frac,cld_lwc,cld_iwc,n_lev,n_rxn)
     max_idx = np.unravel_index(np.argmax(j_out),j_out.shape)
     i_lev_max = max_idx[0]
     i_j_max = max_idx[1]

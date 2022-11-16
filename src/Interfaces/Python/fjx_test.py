@@ -48,7 +48,7 @@ j_out = np.zeros((n_lev,max_rates))
 #print(cloudj_python.run_cloudj.__doc__)
 
 print('Initializing..')
-cloudj_python.init_cloudj(tables_dir, True)
+cloudj_python.init_cloudj(tables_dir, Ak_hPa, Bk, n_lev, n_cldlev, True)
 
 # The next two steps are for the user only - Cloud-J can be 
 # run without doing these
@@ -65,8 +65,8 @@ for sza in np.linspace(-np.pi,np.pi,11):
     U0 = np.cos(sza)
     # Output dimensions: [level, j-rate]
     # NB: j_out will be -999 throughout if sizing is incorrect
-    j_out = cloudj_python.run_cloudj(tables_dir,U0,PS_hPa,albedo,wind,chlr,
-                                     Ak_hPa,Bk,T_K,RH_frac,O3_ppbv,CH4_ppbv,
+    j_out = cloudj_python.run_cloudj(U0,PS_hPa,albedo,wind,chlr,
+                                     T_K,RH_frac,O3_ppbv,CH4_ppbv,
                                      aerpath[:,0],aeridx[:,0],aerpath[:,1],aeridx[:,1],
                                      cld_frac,cld_lwc,cld_iwc,n_lev,n_rxn)
     max_idx = np.unravel_index(np.argmax(j_out),j_out.shape)

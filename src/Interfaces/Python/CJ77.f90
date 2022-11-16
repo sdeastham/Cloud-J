@@ -21,17 +21,35 @@
       implicit none
 
       logical :: cj_initialized=.false.
+      real*8, allocatable :: etaa(:), etab(:)
 
 !---------------key params in/out of CLOUD_J-------------------------
 
       CONTAINS
 
-      SUBROUTINE INIT_CLOUDJ ( TABLES_DIR, verbose )
-
+      SUBROUTINE INIT_CLOUDJ ( TABLES_DIR, Ak, Bk, n_lev, n_cldlev, verbose )
+      ! Initialize Cloud-J
+      ! In the future, intend to also pass n_lev and n_cldlev
       character(len=255)          :: TABLES_DIR
       logical, intent(in)         :: verbose
-      INTEGER :: JVNU, NJXX
+      integer, intent(in)         :: n_lev, n_cldlev
+      real*8, intent(in)          :: Ak(n_lev+2), Bk(n_lev+2)
+!f2py intent(in) tables_dir, Ak, Bk, n_lev, n_cldlev, verbose
+!f2py depend(n_lev) Ak, Bk
+      INTEGER :: JVNU, NJXX, stat
       character*6,  dimension(JVN_)  ::  TITLJXX
+
+      ! TODO: Use arguments to change common variables L_ etc
+      ! TODO: Replace STOP with proper error handling
+      allocate(etaa(n_lev+2),stat=stat)
+      if (stat.ne.0) Stop 'ETAA'
+      allocate(etab(n_lev+2),stat=stat)
+      if (stat.ne.0) Stop 'ETAB'
+      etaa(:) = Ak(:)
+      etab(:) = Bk(:)
+
+      ETAA(n_lev+2) = 0.d0
+      ETAB(n_lev+2) = 0.d0
 
       JVNU = JVN_
       if (.not. cj_initialized) then
@@ -41,8 +59,8 @@
 
       END SUBROUTINE INIT_CLOUDJ
 
-      SUBROUTINE RUN_CLOUDJ ( TABLES_DIR, U0, PSURF, &
-                              ALBEDO, WIND, CHLR, ETAA, ETAB, &
+      SUBROUTINE RUN_CLOUDJ ( U0, PSURF, &
+                              ALBEDO, WIND, CHLR, &
                               TI, RI, O3, CH4, AER1, NAA1, AER2, NAA2, &
                               CLDFRW, CLDLWCW, CLDIWCW, ZPJQUAD, N0, N1 )
       ! O3 and CH4 expected in ppbv
@@ -52,7 +70,7 @@
       character(len=255)          :: TABLES_DIR
       Real*8, dimension(:)        :: O3, CH4 ! L1_
       Real*8, dimension(:)        :: CLDFRW,CLDIWCW,CLDLWCW ! LWEPAR
-      Real*8, dimension(:)        :: ETAA,ETAB,RI,TI,AER1,AER2 ! L2_
+      Real*8, dimension(:)        :: RI,TI,AER1,AER2 ! L2_
       Integer,dimension(:)        :: NAA1,NAA2 ! L2_
       Integer                     :: N0,N1
       Real*8, dimension(N0,N1)    :: ZPJQUAD
@@ -122,46 +140,7 @@
 !---read in & store all fast-JX data:   single call at set up
 !-----------------------------------------------------------------------
       !call INIT_CLDJ (TITLJXX,JVNU,NJXX,TABLES_DIR)
-      call INIT_CLOUDJ(TABLES_DIR,verbose)
 !-----------------------------------------------------------------------
-
-      use_file = .false.
-
-!--P, T, Cld & Aersl profiles, simple test input case
-      if (use_file) then
-       file_loc = trim(tables_dir) // "/atmos_PTClds.dat"
-       open (77,file=trim(file_loc),status='old')
-         read (77,*)
-         read (77,'(2i5)') MONTH, ILAT               ! for monthly 2D climatologies
-           YLAT = ILAT
-         read (77,'(f5.0)') PSURF
-         read (77,'(f5.2)') ALBEDO(5)
-         read (77,'(4f5.2)') ALBEDO(1),ALBEDO(2),ALBEDO(3),ALBEDO(4)
-         read (77,'(4f5.2)') WIND,CHLR
-         if (verbose) then
-           write(6,'(a,2i5,5x,a,i5)') 'Atmosphere:',LPAR,LWEPAR, &
-                                      'LPAR / LWEPAR', L1_
-           write(6,'(a,f10.4)') 'P surface', PSURF
-           write(6,'(a,3i4)') 'MONTH/ LAT',MONTH,ILAT
-           write(6,'(a,5f8.4)') 'Albedos 1:4 & 5=SZA', ALBEDO
-           write(6,'(a,2f8.3)') 'OSA: wind & chlor-a',WIND,CHLR
-         endif
-         read (77,*)
-        do L = 1,LPAR+1
-         read (77,'(i3,1x,2f11.7,2x,f5.1,f5.2,f11.2,2(f7.3,i4))') &
-                       J,ETAA(L),ETAB(L),TI(L),RI(L),ZOFL(L) &
-                      ,AER1(L),NAA1(L),AER2(L),NAA2(L)
-        enddo
-         read (77,*)
-        do L = LWEPAR,1,-1
-         read (77,'(i3,1p,e14.5,28x,2e14.5)') &
-                       J,CLDFRW(L),CLDLWCW(L),CLDIWCW(L)
-        enddo
-       close(77)
-      endif
-
-      ETAA(L2_) = 0.d0
-      ETAB(L2_) = 0.d0
 
       do L = 1,L2_
        PPP(L) = ETAA(L) + ETAB(L)*PSURF

@@ -12,6 +12,7 @@
       IMPLICIT NONE
 
       PUBLIC  :: INIT_CLDJ
+      PUBLIC  :: CLEANUP_CLDJ
       LOGICAL :: LPRT = .FALSE.
 
       CONTAINS
@@ -1091,5 +1092,18 @@
 
       END SUBROUTINE RANSET
 
+      SUBROUTINE CLEANUP_CLDJ(verbose)
+      ! Currently a dummy function
+      ! Will eventually deallocate arrays to enable
+      ! (eg) vertical resizing
+      LOGICAL, OPTIONAL, INTENT(IN) :: verbose
+      LOGICAL :: LPRT_CLEANUP
+      if (present(verbose)) then
+         LPRT_CLEANUP = verbose
+      else
+         LPRT_CLEANUP = .false.
+      endif
+      if (LPRT_CLEANUP) write(*,*) 'Cleaning up Cloud-J'
+      END SUBROUTINE
 
       END MODULE CLDJ_INIT_MOD

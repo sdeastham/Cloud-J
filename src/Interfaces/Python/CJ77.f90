@@ -43,8 +43,15 @@
          call INIT_CLDJ (TITLJXX,JVNU,NJXX,TABLES_DIR,verbose)
          cj_initialized = .true.
       endif
-
       END SUBROUTINE INIT_CLOUDJ
+
+      SUBROUTINE CLEANUP_CLOUDJ ()
+      ! Used to deinitialize an established instance of Cloud-J
+      if (cj_initialized) then
+         call CLEANUP_CLDJ()
+         cj_initialized = .false.
+      endif
+      END SUBROUTINE
 
       SUBROUTINE RUN_CLOUDJ ( U0, PEDGE, &
                               ALBEDO, WIND, CHLR, &

@@ -27,30 +27,17 @@
 
       CONTAINS
 
-      SUBROUTINE INIT_CLOUDJ ( TABLES_DIR, Ak, Bk, n_lev, n_cldlev, verbose )
+      SUBROUTINE INIT_CLOUDJ ( TABLES_DIR, n_lev, n_cldlev, verbose )
       ! Initialize Cloud-J
       ! In the future, intend to also pass n_lev and n_cldlev
       character(len=255)          :: TABLES_DIR
       logical, intent(in)         :: verbose
       integer, intent(in)         :: n_lev, n_cldlev
-      real*8, intent(in)          :: Ak(n_lev+2), Bk(n_lev+2)
 !f2py intent(in) tables_dir, Ak, Bk, n_lev, n_cldlev, verbose
-!f2py depend(n_lev) Ak, Bk
       INTEGER :: JVNU, NJXX, stat
       character*6,  dimension(JVN_)  ::  TITLJXX
 
       ! TODO: Use arguments to change common variables L_ etc
-      ! TODO: Replace STOP with proper error handling
-      allocate(etaa(n_lev+2),stat=stat)
-      if (stat.ne.0) Stop 'ETAA'
-      allocate(etab(n_lev+2),stat=stat)
-      if (stat.ne.0) Stop 'ETAB'
-      etaa(:) = Ak(:)
-      etab(:) = Bk(:)
-
-      ETAA(n_lev+2) = 0.d0
-      ETAB(n_lev+2) = 0.d0
-
       JVNU = JVN_
       if (.not. cj_initialized) then
          call INIT_CLDJ (TITLJXX,JVNU,NJXX,TABLES_DIR,verbose)
@@ -59,10 +46,11 @@
 
       END SUBROUTINE INIT_CLOUDJ
 
-      SUBROUTINE RUN_CLOUDJ ( U0, PSURF, &
+      SUBROUTINE RUN_CLOUDJ ( U0, PEDGE, &
                               ALBEDO, WIND, CHLR, &
                               TI, RI, O3, CH4, AER1, NAA1, AER2, NAA2, &
-                              CLDFRW, CLDLWCW, CLDIWCW, ZPJQUAD, N0, N1 )
+                              CLDFRW, CLDLWCW, CLDIWCW, ZPJQUAD, N0, N1, &
+                              USE_OSA )
       ! O3 and CH4 expected in ppbv
 
       !SUBROUTINE RUN_CLOUDJ ( TABLES_DIR )
@@ -70,11 +58,12 @@
       character(len=255)          :: TABLES_DIR
       Real*8, dimension(:)        :: O3, CH4 ! L1_
       Real*8, dimension(:)        :: CLDFRW,CLDIWCW,CLDLWCW ! LWEPAR
-      Real*8, dimension(:)        :: RI,TI,AER1,AER2 ! L2_
+      Real*8, dimension(:)        :: RI,TI,AER1,AER2,PEDGE ! L2_
       Integer,dimension(:)        :: NAA1,NAA2 ! L2_
       Integer                     :: N0,N1
       Real*8, dimension(N0,N1)    :: ZPJQUAD
-!f2py intent(in) n0, n1
+      Logical, Intent(in)         :: USE_OSA
+!f2py intent(in) n0, n1, use_osa
 !f2py intent(out) zpjquad
 !f2py depend(n0,n1) zpjquad
 
@@ -142,9 +131,12 @@
       !call INIT_CLDJ (TITLJXX,JVNU,NJXX,TABLES_DIR)
 !-----------------------------------------------------------------------
 
-      do L = 1,L2_
-       PPP(L) = ETAA(L) + ETAB(L)*PSURF
-      enddo
+      ! In hPa
+      PPP(:) = 0.0d0
+      PPP(1:L2_) = PEDGE(1:L2_)
+      !do L = 1,L2_
+      ! PPP(L) = ETAA(L) + ETAB(L)*PSURF
+      !enddo
 
 ! just for print out and levels
         !do L = 1,L1_
@@ -255,22 +247,28 @@
       SOLF = 1.d0
 
 ! beware the OSA code uses single R*4 variables
-      ANGLES(1) = sngl(EMU(1))
-      ANGLES(2) = sngl(EMU(2))
-      ANGLES(3) = sngl(EMU(3))
-      ANGLES(4) = sngl(EMU(4))
-      ANGLES(5) = sngl(U0)
-      OWIND = sngl(WIND)
-      OCHLR = sngl(CHLR)
-      do K = 1,NS2
-        OWAVEL = sngl(WL(K))
-        call OSA(OWAVEL,OWIND,OCHLR, ANGLES,OSA_dir)
-        do J = 1,5
-          RFL(J,K) = dble(OSA_dir(J))
-! this overwrite the OSA with the readin values above
+      If (USE_OSA) Then
+       ANGLES(1) = sngl(EMU(1))
+       ANGLES(2) = sngl(EMU(2))
+       ANGLES(3) = sngl(EMU(3))
+       ANGLES(4) = sngl(EMU(4))
+       ANGLES(5) = sngl(U0)
+       OWIND = sngl(WIND)
+       OCHLR = sngl(CHLR)
+       do K = 1,NS2
+         OWAVEL = sngl(WL(K))
+         call OSA(OWAVEL,OWIND,OCHLR, ANGLES,OSA_dir)
+         do J = 1,5
+           RFL(J,K) = dble(OSA_dir(J))
+         enddo
+       enddo
+      else
+       do K = 1,NS2
+         do J = 1,5
           RFL(J,K) = ALBEDO(J)
         enddo
-      enddo
+       enddo
+      endif
 
       LPRTJ = verbose
       if (LPRTJ) then

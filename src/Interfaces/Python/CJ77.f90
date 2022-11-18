@@ -21,7 +21,6 @@
       implicit none
 
       logical :: cj_initialized=.false.
-      real*8, allocatable :: etaa(:), etab(:)
 
 !---------------key params in/out of CLOUD_J-------------------------
 
@@ -45,10 +44,10 @@
       endif
       END SUBROUTINE INIT_CLOUDJ
 
-      SUBROUTINE CLEANUP_CLOUDJ ()
+      SUBROUTINE CLEANUP_CLOUDJ()
       ! Used to deinitialize an established instance of Cloud-J
       if (cj_initialized) then
-         call CLEANUP_CLDJ()
+         call CLEANUP_CLDJ(.false.)
          cj_initialized = .false.
       endif
       END SUBROUTINE
@@ -56,23 +55,20 @@
       SUBROUTINE RUN_CLOUDJ ( U0, PEDGE, &
                               ALBEDO, WIND, CHLR, &
                               TI, RI, O3, CH4, AER1, NAA1, AER2, NAA2, &
-                              CLDFRW, CLDLWCW, CLDIWCW, ZPJQUAD, N0, N1, &
-                              USE_OSA )
+                              CLDFRW, CLDLWCW, CLDIWCW, NLEV_IN, NRATJ_IN, &
+                              USE_OSA, ZPJQUAD )
       ! O3 and CH4 expected in ppbv
-
-      !SUBROUTINE RUN_CLOUDJ ( TABLES_DIR )
-
-      character(len=255)          :: TABLES_DIR
-      Real*8, dimension(:)        :: O3, CH4 ! L1_
-      Real*8, dimension(:)        :: CLDFRW,CLDIWCW,CLDLWCW ! LWEPAR
-      Real*8, dimension(:)        :: RI,TI,AER1,AER2,PEDGE ! L2_
-      Integer,dimension(:)        :: NAA1,NAA2 ! L2_
-      Integer                     :: N0,N1
-      Real*8, dimension(N0,N1)    :: ZPJQUAD
-      Logical, Intent(in)         :: USE_OSA
-!f2py intent(in) n0, n1, use_osa
+      Integer, INTENT(IN)                     :: NLEV_IN,NRATJ_IN
+      character(len=255)                      :: TABLES_DIR
+      Real*8, dimension(:)                    :: O3, CH4 ! L1_
+      Real*8, dimension(:)                    :: CLDFRW,CLDIWCW,CLDLWCW ! LWEPAR
+      Real*8, dimension(:)                    :: RI,TI,AER1,AER2,PEDGE ! L2_
+      Integer,dimension(:)                    :: NAA1,NAA2 ! L2_
+      Real*8, dimension(NLEV_IN,NRATJ_IN)     :: ZPJQUAD
+      Logical, Intent(in)                     :: USE_OSA
+!f2py intent(in) NLEV_IN, NRATJ_IN, use_osa
 !f2py intent(out) zpjquad
-!f2py depend(n0,n1) zpjquad
+!f2py depend(NLEV_IN,NRATJ_IN) zpjquad
 
       !Real*8, dimension(L1_)      :: O3, CH4 ! L1_
       !Real*8, dimension(LWEPAR)   :: CLDFRW,CLDIWCW,CLDLWCW ! LWEPAR
@@ -120,11 +116,11 @@
 
       if (verbose) write(6,'(a)') '>>>begin Cloud-J v7.7 Standalone'
 
-      if (N0 .ne. L_) then
-          write(*,*) 'Mismatch in level count: ', N0, L_
+      if (NLEV_IN .ne. L_) then
+          write(*,*) 'Mismatch in level count: ', NLEV_IN, L_
           ZPJQUAD(:,:) = -999.0
           return
-      elseif (N1 .lt. NRATJ) then
+      elseif (NRATJ_IN .lt. NRATJ) then
           write(*,*) 'Output array not large enough to hold J-rates. Need: ', NRATJ
           ZPJQUAD(:,:) = -999.0
           return
@@ -151,6 +147,7 @@
         !enddo
 !---sets climatologies for O3, T, D & Z
 !-----------------------------------------------------------------------
+      use_file = .false.
       if (use_file) call ACLIM_FJX (YLAT,MONTH,PPP, TTT,O3,CH4, L1_)
 !-----------------------------------------------------------------------
 
@@ -336,6 +333,7 @@
 
 !---map the J-values from fast-JX onto CTM (ZPJQUAD) using JIND & JFACTA
 !--- from the 'FJX_j2j.dat' tables
+      ZPJQUAD(:,:) = 0.0
       do J = 1,NRATJ
          JP = JIND(J)
          if (JP .gt. 0) then

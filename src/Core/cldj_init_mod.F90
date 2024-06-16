@@ -49,6 +49,7 @@
       L_    = NLEVELS
       L1_   = L_ + 1
       L2_   = L_ + 2
+      LWEPAR = MIN(34,L_-1)
 #endif
 
       JVL_  = L_
